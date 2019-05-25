@@ -1,0 +1,17 @@
+{
+  "name": "twittercodebot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Lassi \"Kodo\" Hirvonen",
+  "license": "ISC",
+  "dependencies": {
+    "deckstrings": "^2.1.0",
+    "nodejs-ocr": "^1.1.3",
+    "string-similarity": "^3.0.0",
+    "tesseract.js": "^1.0.14"
+  }
+}
