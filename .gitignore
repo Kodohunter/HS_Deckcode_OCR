@@ -64,6 +64,9 @@ typings/
 tulokset/
 decklists/
 
+# personal config information
+src/config.js
+
 # datatrain
 .eng.traineddata
 eng.traineddata
