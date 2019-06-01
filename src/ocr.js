@@ -1,7 +1,8 @@
 const Tesseract = require('tesseract.js')
 const https = require('https');
 const stringSimilarity = require('string-similarity');
-//const encode = require('deckstrings');
+const deckstring = require("./deckstring");
+import { encode, decode, FormatType } from "deckstrings";
 
 // I probably should just make a class for these
 var ocrGlobals = {
@@ -27,7 +28,7 @@ function getCollectibleCardsJSON(){
         });
 
         resp.on('end', () => {
-            cardData = JSON.parse(data);
+            let cardData = JSON.parse(data);
             ocrGlobals.cardData = cardData;
             runTesseractRecognition();
         });
@@ -81,14 +82,14 @@ function finalize(){
                 cardClass: []
             }
 
-            manacostPosEnd = card.indexOf(" ");
-            cardNamePosEnd = card.lastIndexOf(" ");
+            let manacostPosEnd = card.indexOf(" ");
+            let cardNamePosEnd = card.lastIndexOf(" ");
 
             //console.log("'"+card+"'");
             //console.log("ManaPosEnd: " + manacostPosEnd + " cardNamePosEnd: "+cardNamePosEnd);
 
-            manaCost = card.slice(0, manacostPosEnd);
-            cardCount = card.slice(cardNamePosEnd + 1);
+            let manaCost = card.slice(0, manacostPosEnd);
+            let cardCount = card.slice(cardNamePosEnd + 1);
             card = card.slice(manacostPosEnd + 1, cardNamePosEnd);
 
             switch (true){
@@ -116,14 +117,14 @@ function finalize(){
             for(let i = 0; i < cardData.length; i++){
                 if(cardData[i].cost == manaCost){
                     cardsObject.cardNames = [...cardsObject.cardNames, cardData[i].name.toLowerCase()];
-                    cardsObject.cardId = [...cardsObject.cardId, cardData[i].id];
+                    cardsObject.cardId = [...cardsObject.cardId, cardData[i].dbfId];
                     cardsObject.cardMana = [...cardsObject.cardMana, cardData[i].cost];
                     cardsObject.cardClass = [...cardsObject.cardClass, cardData[i].cardClass];
                 }
             }
 
             // find the best match from the hearthstone JSON collection
-            cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), cardsObject.cardNames);
+            let cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), cardsObject.cardNames);
             
             
 
@@ -188,7 +189,7 @@ function finalize(){
             for(let j = 0; j < cardData.length; j++){
                 if(cardData[j].cost == deck[i].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
                     cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                    cardsObject.cardId = [...cardsObject.cardId, cardData[j].id];
+                    cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
                     cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
                     cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
                 }
@@ -201,7 +202,7 @@ function finalize(){
                     if (deck[i].manaCost > deck[1].manaCost){
                         if(cardData[j].cost <= deck[i+1].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
                             cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].id];
+                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
                             cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
                             cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
                             proceed = true;
@@ -212,7 +213,7 @@ function finalize(){
                     if (deck[i].manaCost < deck[i-1].manaCost){
                         if(cardData[j].cost >= deck[i-1].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
                             cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].id];
+                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
                             cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
                             cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
                             proceed = true;
@@ -223,7 +224,7 @@ function finalize(){
                     if (deck[i].manaCost < deck[i-1].manaCost || deck[i].manaCost > deck[i+1].manaCost){
                         if(cardData[j].cost >= deck[i-1].manaCost && cardData[j].cost <= deck[i+1].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
                             cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].id];
+                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
                             cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
                             cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
                             proceed = true;
@@ -260,17 +261,66 @@ function finalize(){
     for (i = 0; i < deck.length; i++){
         adjustDeck("Mana");
     }
-    
+
+    //let heroID = getHeroId(deckClass);
+    let deckObject = {
+        cards: [],
+        heroes: [getHeroId(deckClass)],
+        format: FormatType.FT_WILD
+    };
+
     // Create a deckstring from the deck
     for (i = 0; i < deck.length; i++){
-        console.log("Original: "+deck[i].originalReading
+        /*console.log("Original: "+deck[i].originalReading
             +" Card: "+deck[i].cardName
             +" Amount: "+deck[i].count
             +" Class: "+deck[i].cardClass
             +" Mana: "+deck[i].manaCost);
+        */
 
+        deckObject.cards[i] = [deck[i].id, deck[i].count];
+        
     }
 
+    deckstring.convertIntoDeckstring(deckObject);
+
 }
+
+function getHeroId(classname){
+    switch(classname){
+        case "DRUID": 
+            return 274;
+            break;
+        case "HUNTER": 
+            return 31;
+            break;
+        case "MAGE": 
+            return 637;
+            break;
+        case "PALADIN": 
+            return 671;
+            break;
+        case "PRIEST": 
+            return 813;
+            break;
+        case "ROGUE": 
+            return 930;
+            break;
+        case "SHAMAN": 
+            return 1066;
+            break;
+        case "WARLOCK": 
+            return 893;
+            break;
+        case "WARRIOR": 
+            return 7;
+            break;
+        default:
+            return 7;
+            break;
+    }
+}
+
+
 
 module.exports.ocrProcessing = ocrInsertPoint;
