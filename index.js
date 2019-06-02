@@ -1,10 +1,8 @@
 let ocr = require("./src/ocr");
 let config = require("./src/config");
-
-/*
-
 let Twit = require('twit');
 
+/*
 var twitter = new Twit(config.twitterConfig);
 
 twitter.get('account/verify_credentials', {

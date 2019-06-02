@@ -72,7 +72,10 @@ function finalize(){
 
         // Skip all the mistake rows
         var trueLength = card.replace(/ /g, '').length;
-        if(trueLength > 5){ // 5 is just a guess, might require re-evaluation
+
+        // if the length of the row is too short, chances are it's a misreading and not an actual row
+        // 5 is just a guess, might require re-evaluation
+        if(trueLength > 5){ 
 
             // empty the potential cards pool for each round
             cardsObject = {
@@ -82,11 +85,12 @@ function finalize(){
                 cardClass: []
             }
 
+            
+
+            // Find out the manacost, cardname and count from the line
+            card = card.trim();
             let manacostPosEnd = card.indexOf(" ");
             let cardNamePosEnd = card.lastIndexOf(" ");
-
-            //console.log("'"+card+"'");
-            //console.log("ManaPosEnd: " + manacostPosEnd + " cardNamePosEnd: "+cardNamePosEnd);
 
             let manaCost = card.slice(0, manacostPosEnd);
             let cardCount = card.slice(cardNamePosEnd + 1);
@@ -96,7 +100,7 @@ function finalize(){
                 case cardCount.includes("*"): // legendary
                     cardCount = 1;
                     break;
-                case cardCount.includes("2") || cardCount.includes("z"):
+                case cardCount.includes("2") || cardCount.toLowerCase().includes("z"):
                     cardCount = 2;
                     break;
                 default:
@@ -107,8 +111,8 @@ function finalize(){
 
 
             // common mistakes fixes
-            manaCost = manaCost.replace(/o/g, "0");
-            manaCost = manaCost.replace(/z/g, "2");
+            manaCost = manaCost.replace(/oO/g, "0");
+            manaCost = manaCost.replace(/zZ/g, "2");
             manaCost = parseInt(manaCost);
             card = card.replace(/1/g, "l");
             
@@ -156,7 +160,7 @@ function finalize(){
     var compare = 0;
 
     // find the class with highest frequency, which is the most likely class for the deck
-    // naturally 'neutral' is not applicable as a class
+    // 'neutral' is not applicable as a class
     for (i = 0; i < deck.length; i++){
         var cardClass = deck[i].cardClass;
         
@@ -171,7 +175,6 @@ function finalize(){
                     deckClass = cardClass;
             }
         }
-        
     }
 
     function adjustDeck(adjustType, cardIndex = 0){
@@ -271,53 +274,47 @@ function finalize(){
 
     // Create a deckstring from the deck
     for (i = 0; i < deck.length; i++){
-        /*console.log("Original: "+deck[i].originalReading
+        
+        console.log("Original: "+deck[i].originalReading
             +" Card: "+deck[i].cardName
             +" Amount: "+deck[i].count
             +" Class: "+deck[i].cardClass
             +" Mana: "+deck[i].manaCost);
-        */
+        
 
         deckObject.cards[i] = [deck[i].id, deck[i].count];
         
     }
 
-    deckstring.convertIntoDeckstring(deckObject);
-
+    let readyDeckcode = deckstring.convertIntoDeckstring(deckObject);
+    console.log(readyDeckcode);
 }
 
+// retrieves the dbfId's for the default heroes of the classes
 function getHeroId(classname){
     switch(classname){
         case "DRUID": 
             return 274;
-            break;
         case "HUNTER": 
             return 31;
-            break;
         case "MAGE": 
             return 637;
-            break;
         case "PALADIN": 
             return 671;
-            break;
         case "PRIEST": 
             return 813;
-            break;
         case "ROGUE": 
             return 930;
-            break;
         case "SHAMAN": 
             return 1066;
-            break;
         case "WARLOCK": 
             return 893;
-            break;
         case "WARRIOR": 
             return 7;
-            break;
         default:
-            return 7;
-            break;
+            // For now we'll just assume hunter
+            // Should build some sort of safety net here in the future
+            return 31;
     }
 }
 

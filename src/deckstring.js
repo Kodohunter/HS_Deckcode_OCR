@@ -2,8 +2,7 @@
 import { encode, decode, FormatType } from "deckstrings";
 
 function convertIntoDeckstring(deckObject){
-    let deckstring = encode(deckObject);
-    console.log(deckstring);
+    return encode(deckObject);
 }
 
 module.exports.convertIntoDeckstring = convertIntoDeckstring;
