@@ -2,6 +2,7 @@ const Tesseract = require('tesseract.js')
 const https = require('https');
 const stringSimilarity = require('string-similarity');
 const deckstring = require("./deckstring");
+const request = require("request");
 import { encode, decode, FormatType } from "deckstrings";
 
 // I probably should just make a class for these
@@ -16,25 +17,14 @@ function ocrInsertPoint(fileUrl){
     getCollectibleCardsJSON();
 }
 
-// Get a JSON object of all hearthstone cards in existense
-// TODO: find out how to always get the latest version instead of a hardcoded version number
+// Get a JSON object of all collectible hearthstone cards in existense
 function getCollectibleCardsJSON(){
-    https.get('https://api.hearthstonejson.com/v1/31022/enUS/cards.collectible.json', (resp) => {
 
-        let data = '';
-
-        resp.on('data', (chunk) => {
-            data += chunk;
-        });
-
-        resp.on('end', () => {
-            let cardData = JSON.parse(data);
-            ocrGlobals.cardData = cardData;
-            runTesseractRecognition();
-        });
-
-    }).on("error", (err) => {
-        console.log("Error: " + err.message);
+    // we are using an external library 'request' because nodejs' https.get can't handle redirects
+    // and the api uses a /latest/ path redirect to get the latest version of the json
+    request('https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json', function (error, response, body) {
+        ocrGlobals.cardData = JSON.parse(body);
+        runTesseractRecognition();
     });
 }
 
