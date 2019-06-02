@@ -1,12 +1,12 @@
 const Tesseract = require('tesseract.js')
-const https = require('https');
 const stringSimilarity = require('string-similarity');
 const deckstring = require("./deckstring");
 const request = require("request");
 import { encode, decode, FormatType } from "deckstrings";
+const twitterReply = require('../index');
 
 // I probably should just make a class for these
-var ocrGlobals = {
+let ocrGlobals = {
     fileUrl: '',
     cardData: [],
     tesseractResult: ''
@@ -19,9 +19,6 @@ function ocrInsertPoint(fileUrl){
 
 // Get a JSON object of all collectible hearthstone cards in existense
 function getCollectibleCardsJSON(){
-
-    // we are using an external library 'request' because nodejs' https.get can't handle redirects
-    // and the api uses a /latest/ path redirect to get the latest version of the json
     request('https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json', function (error, response, body) {
         ocrGlobals.cardData = JSON.parse(body);
         runTesseractRecognition();
@@ -105,37 +102,44 @@ function finalize(){
             manaCost = manaCost.replace(/zZ/g, "2");
             manaCost = parseInt(manaCost);
             card = card.replace(/1/g, "l");
+
             
             // select only the cards that have the correct mana as potential candidates
             // this heavily relies on mana reading to be correct, but it seems rather reliable
+            // faulty reads usually make manaCost NaN, so just pass everything then
+            console.log(manaCost);
+            console.log(typeof(manaCost));
             for(let i = 0; i < cardData.length; i++){
-                if(cardData[i].cost == manaCost){
+                
+                //if(cardData[i].cost == manaCost || manaCost == NaN){
                     cardsObject.cardNames = [...cardsObject.cardNames, cardData[i].name.toLowerCase()];
                     cardsObject.cardId = [...cardsObject.cardId, cardData[i].dbfId];
                     cardsObject.cardMana = [...cardsObject.cardMana, cardData[i].cost];
                     cardsObject.cardClass = [...cardsObject.cardClass, cardData[i].cardClass];
-                }
+                //}
             }
 
             // find the best match from the hearthstone JSON collection
-            let cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), cardsObject.cardNames);
             
+            if(card){
+                let cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), cardsObject.cardNames);
             
 
-            if(cardsObject.cardClass[cleanedCard.bestMatchIndex] !== "NEUTRAL")
-                deckClass = cardsObject.cardClass[cleanedCard.bestMatchIndex];
+                if(cardsObject.cardClass[cleanedCard.bestMatchIndex] !== "NEUTRAL")
+                    deckClass = cardsObject.cardClass[cleanedCard.bestMatchIndex];
 
-            //console.log("Original: " + card + " Best match: " + cardsObject.cardNames[cleanedCard.bestMatchIndex] + " ID: " + cardsObject.cardId[cleanedCard.bestMatchIndex] + " Index: " + cleanedCard.bestMatchIndex + " Class: " + cardsObject.cardClass[cleanedCard.bestMatchIndex] + " Mana: " + manaCost + " Count: " + cardCount );
+                //console.log("Original: " + card + " Best match: " + cardsObject.cardNames[cleanedCard.bestMatchIndex] + " ID: " + cardsObject.cardId[cleanedCard.bestMatchIndex] + " Index: " + cleanedCard.bestMatchIndex + " Class: " + cardsObject.cardClass[cleanedCard.bestMatchIndex] + " Mana: " + manaCost + " Count: " + cardCount );
 
-            // Add the card to the deck
-            deck = [...deck, {
-                cardName: cardsObject.cardNames[cleanedCard.bestMatchIndex],
-                originalReading: card,
-                cardClass: cardsObject.cardClass[cleanedCard.bestMatchIndex],
-                id: cardsObject.cardId[cleanedCard.bestMatchIndex],
-                count: cardCount,
-                manaCost: manaCost
-            }]
+                // Add the card to the deck
+                deck = [...deck, {
+                    cardName: cardsObject.cardNames[cleanedCard.bestMatchIndex],
+                    originalReading: card,
+                    cardClass: cardsObject.cardClass[cleanedCard.bestMatchIndex],
+                    id: cardsObject.cardId[cleanedCard.bestMatchIndex],
+                    count: cardCount,
+                    manaCost: manaCost
+                }]
+            }
         }
     } // end of for-loop: tesseract output
 
@@ -230,7 +234,7 @@ function finalize(){
 
         if (proceed){
             // find the best match from the new set of potential options
-            cleanedCard = stringSimilarity.findBestMatch(deck[i].originalReading.toLowerCase(), cardsObject.cardNames);
+            let cleanedCard = stringSimilarity.findBestMatch(deck[i].originalReading.toLowerCase(), cardsObject.cardNames);
         
             // set the new best match's values to object
             // no need to edit count or original reading, since they stay the same
@@ -266,10 +270,10 @@ function finalize(){
     for (i = 0; i < deck.length; i++){
         
         console.log("Original: "+deck[i].originalReading
-            +" Card: "+deck[i].cardName
-            +" Amount: "+deck[i].count
-            +" Class: "+deck[i].cardClass
-            +" Mana: "+deck[i].manaCost);
+            +"\t\t Card: "+deck[i].cardName
+            +"\t\t Amount: "+deck[i].count
+            +"\t\t Class: "+deck[i].cardClass
+            +"\t\t Mana: "+deck[i].manaCost);
         
 
         deckObject.cards[i] = [deck[i].id, deck[i].count];
@@ -277,7 +281,7 @@ function finalize(){
     }
 
     let readyDeckcode = deckstring.convertIntoDeckstring(deckObject);
-    console.log(readyDeckcode);
+    twitterReply.replyTheDeckcode(readyDeckcode);
 }
 
 // retrieves the dbfId's for the default heroes of the classes
