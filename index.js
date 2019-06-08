@@ -30,12 +30,12 @@ function onAuthenticated(err, res) {
         replyID = tweet.id_str;
         let file = tweet.entities.media[0].media_url;
 
-        ocr.ocrProcessing(file);
+        main(file);
     })
 
 }
 */
-
+// reply the deckcode to the requester in twitter
 function replyTheDeckcode(deckcode){
     let replyText = "Deckcode: "+deckcode;
     console.log(replyText);
@@ -46,17 +46,16 @@ function replyTheDeckcode(deckcode){
     */
 }
 
-module.exports.replyTheDeckcode = replyTheDeckcode;
+// for ocr testing, we'll just directly test lists instead of testing via twitter posts
+let testFile = './decklists/kuva6.png';
+main(testFile);
 
-let testFile = './decklists/kuva6.png'
-//ocr.ocrProcessing(testFile);
-
-
-
-async function main(){
+// making function async allows for awaits, something the program will stop and wait for
+// The wait will be broken by the resolve in the function's promise
+async function main(filePath){
     let cardsJSON = await ocr.getCollectibleCardsJSON();
-    let tesseractResults = await ocr.runTesseractRecognition(testFile);
-    ocr.finalize(cardsJSON, tesseractResults);
+    let tesseractResults = await ocr.runTesseractRecognition(filePath);
+    let readyDeckcode = ocr.cleanOcrResults(cardsJSON, tesseractResults);
+    replyTheDeckcode(readyDeckcode);
 }
 
-main();

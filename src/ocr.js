@@ -3,7 +3,6 @@ const stringSimilarity = require('string-similarity');
 const deckstring = require("./deckstring");
 const request = require("request");
 import { encode, decode, FormatType } from "deckstrings";
-const twitterReply = require('../index');
 
 // I probably should just make a class for these
 let ocrGlobals = {
@@ -38,7 +37,7 @@ function runTesseractRecognition(fileUrl){
 module.exports.runTesseractRecognition = runTesseractRecognition;
 
 
-function finalize(cardData, tesseractResult){
+function cleanOcrResults(cardData, tesseractResult){
 
     //let cardData = ocrGlobals.cardData;
     let deck = [];  
@@ -111,8 +110,6 @@ function finalize(cardData, tesseractResult){
             // select only the cards that have the correct mana as potential candidates
             // this heavily relies on mana reading to be correct, but it seems rather reliable
             // faulty reads usually make manaCost NaN, so just pass everything then
-            console.log(manaCost);
-            console.log(typeof(manaCost));
             for(let i = 0; i < cardData.length; i++){
                 
                 // this is causing empty cardsObjects, which break the stringSimiliarity, so commented until fixed
@@ -286,9 +283,9 @@ function finalize(cardData, tesseractResult){
     }
 
     let readyDeckcode = deckstring.convertIntoDeckstring(deckObject);
-    twitterReply.replyTheDeckcode(readyDeckcode);
+    return readyDeckcode;
 }
-module.exports.finalize = finalize;
+module.exports.cleanOcrResults = cleanOcrResults;
 
 // retrieves the dbfId's for the default heroes of the classes
 function getHeroId(classname){
