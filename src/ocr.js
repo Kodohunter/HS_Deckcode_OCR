@@ -111,6 +111,7 @@ function finalize(){
             console.log(typeof(manaCost));
             for(let i = 0; i < cardData.length; i++){
                 
+                // this is causing empty cardsObjects, which break the stringSimiliarity, so commented until fixed
                 //if(cardData[i].cost == manaCost || manaCost == NaN){
                     cardsObject.cardNames = [...cardsObject.cardNames, cardData[i].name.toLowerCase()];
                     cardsObject.cardId = [...cardsObject.cardId, cardData[i].dbfId];

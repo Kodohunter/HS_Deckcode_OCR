@@ -50,4 +50,4 @@ function replyTheDeckcode(deckcode){
 module.exports.replyTheDeckcode = replyTheDeckcode;
 
 let testFile = './decklists/NewSet/mage.png'
-ocr.ocrProcessing(testFile);
+//ocr.ocrProcessing(testFile);
