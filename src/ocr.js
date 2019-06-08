@@ -19,24 +19,28 @@ function ocrInsertPoint(fileUrl){
 
 // Get a JSON object of all collectible hearthstone cards in existense
 function getCollectibleCardsJSON(){
-    request('https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json', function (error, response, body) {
-        ocrGlobals.cardData = JSON.parse(body);
-        runTesseractRecognition();
+    return new Promise(resolve => {
+        request('https://api.hearthstonejson.com/v1/latest/enUS/cards.collectible.json', function (error, response, body) {
+            resolve(JSON.parse(body));
+        });
     });
 }
+module.exports.getCollectibleCardsJSON = getCollectibleCardsJSON;
 
-function runTesseractRecognition(){
-    Tesseract.recognize(ocrGlobals.fileUrl)
-    .then(function(result){
-        ocrGlobals.tesseractResult = result;
-        finalize();
-    })
+function runTesseractRecognition(fileUrl){
+    return new Promise(resolve => {
+        Tesseract.recognize(fileUrl)
+        .then(function(result){
+            resolve(result);
+        })
+    });
 }
+module.exports.runTesseractRecognition = runTesseractRecognition;
 
 
-function finalize(){
+function finalize(cardData, tesseractResult){
 
-    let cardData = ocrGlobals.cardData;
+    //let cardData = ocrGlobals.cardData;
     let deck = [];  
     var cardsObject = {
         cardNames: [],
@@ -48,7 +52,7 @@ function finalize(){
 
 
     // Split the output into potential cards, seperated by newlines
-    var fullText = ocrGlobals.tesseractResult['text'];
+    var fullText = tesseractResult['text'];
     var output = fullText.split('\n');
     var deckClass;
 
@@ -284,6 +288,7 @@ function finalize(){
     let readyDeckcode = deckstring.convertIntoDeckstring(deckObject);
     twitterReply.replyTheDeckcode(readyDeckcode);
 }
+module.exports.finalize = finalize;
 
 // retrieves the dbfId's for the default heroes of the classes
 function getHeroId(classname){

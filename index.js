@@ -7,6 +7,8 @@ var twitter = new Twit(config.twitterConfig);
 // this is only for testing purposes, something smart will replace it eventually
 let replyID = '';
 
+
+
 /*
 twitter.get('account/verify_credentials', {
     include_entities: false,
@@ -44,10 +46,17 @@ function replyTheDeckcode(deckcode){
     */
 }
 
-// I'd want this to be run when ready, but currently it's invocated by ocr.js
-// The asynchronity is really though to solve, but there must be a way to make the program make sense logically
-// Probably a class that walks with the process is a start
 module.exports.replyTheDeckcode = replyTheDeckcode;
 
-let testFile = './decklists/NewSet/mage.png'
+let testFile = './decklists/kuva6.png'
 //ocr.ocrProcessing(testFile);
+
+
+
+async function main(){
+    let cardsJSON = await ocr.getCollectibleCardsJSON();
+    let tesseractResults = await ocr.runTesseractRecognition(testFile);
+    ocr.finalize(cardsJSON, tesseractResults);
+}
+
+main();
