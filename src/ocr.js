@@ -50,13 +50,13 @@ function filterCardsList(listOfAllCards, manaCost){
 function createDeck(deckReadingResults, listOfAllCards){
     let deck = [];
     let deckClass;
-    for (var i = 0; i < deckReadingResults.length; i++){
+    for (let i = 0; i < deckReadingResults.length; i++){
 
         // Clean the deckReadingResults for better comparing results
-        var card = deckReadingResults[i].replace(/[^a-zA-Z0-9* ]/g, '');
+        let card = deckReadingResults[i].replace(/[^a-zA-Z0-9* ]/g, '');
 
         // Skip all the mistake rows
-        var trueLength = card.replace(/ /g, '').length;
+        let trueLength = card.replace(/ /g, '').length;
 
         // if the length of the row is too short, chances are it's a misreading and not an actual row
         // 5 is just a guess, might require re-evaluation
@@ -125,8 +125,8 @@ function cleanOcrResults(listOfAllCards, tesseractResult){
 
 
     // Split the deckReadingResultsArray into potential cards, seperated by newlines
-    var fullText = tesseractResult['text'];
-    var deckReadingResultsArray = fullText.split('\n');
+    let fullText = tesseractResult['text'];
+    let deckReadingResultsArray = fullText.split('\n');
     
     // Only made like this, because the function returns 2 values
     // Need to take a look if there's a cleaner option avaiable
@@ -134,13 +134,13 @@ function cleanOcrResults(listOfAllCards, tesseractResult){
     let deck = deckTemp[0];
     let deckClass = deckTemp[1];
 
-    var counts = {};
-    var compare = 0;
+    let counts = {};
+    let compare = 0;
 
     // find the class with highest frequency, which is the most likely class for the deck
     // 'neutral' is not applicable as a class
     for (let i = 0; i < deck.length; i++){
-        var cardClass = deck[i].cardClass;
+        let cardClass = deck[i].cardClass;
         
         if(cardClass != "NEUTRAL"){
             if(counts[cardClass] === undefined){
@@ -203,7 +203,7 @@ function adjustDeck(deck, adjustType, cardIndex, listOfAllCards){
         cardMana: [],
         cardClass: []
     }
-    var proceed = false;
+    let proceed = false;
 
     // find new set of potential cards now filtered with both the manacost and the deck's class
     if(adjustType == "Class"){
