@@ -53,9 +53,9 @@ main(testFile);
 // making function async allows for awaits, something the program will stop and wait for
 // The wait will be broken by the resolve in the function's promise
 async function main(filePath){
-    let cardsJSON = await ocr.getCollectibleCardsJSON();
-    let tesseractResults = await ocr.runTesseractRecognition(filePath);
-    let readyDeckcode = ocr.cleanOcrResults(cardsJSON, tesseractResults);
+    let listOfAllCards = await ocr.getCollectibleCardsJSON();
+    let tesseractResult = await ocr.runTesseractRecognition(filePath);
+    let readyDeckcode = ocr.cleanOcrResults(listOfAllCards, tesseractResult);
     replyTheDeckcode(readyDeckcode);
 }
 

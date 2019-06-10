@@ -4,17 +4,6 @@ const deckstring = require("./deckstring");
 const request = require("request");
 import { encode, decode, FormatType } from "deckstrings";
 
-// I probably should just make a class for these
-let ocrGlobals = {
-    fileUrl: '',
-    cardData: [],
-    tesseractResult: ''
-}
-
-function ocrInsertPoint(fileUrl){
-    ocrGlobals.fileUrl = fileUrl;
-    getCollectibleCardsJSON();
-}
 
 // Get a JSON object of all collectible hearthstone cards in existense
 function getCollectibleCardsJSON(){
@@ -36,29 +25,35 @@ function runTesseractRecognition(fileUrl){
 }
 module.exports.runTesseractRecognition = runTesseractRecognition;
 
-
-function cleanOcrResults(cardData, tesseractResult){
-
-    //let cardData = ocrGlobals.cardData;
-    let deck = [];  
-    var cardsObject = {
+// select only the cards that have the correct mana as potential candidates
+// this heavily relies on mana reading to be correct, but it seems rather reliable
+// faulty reads usually make manaCost NaN, so just pass everything then
+function filterCardsList(listOfAllCards, manaCost){
+    let filteredListOfCards = {
         cardNames: [],
         cardId: [],
         cardMana: [],
         cardClass: []
     }
-    
+    for(let i = 0; i < listOfAllCards.length; i++){
+        // this is causing empty cardsObjects, which break the stringSimiliarity, so commented until fixed
+        //if(listOfAllCards[i].cost == manaCost || manaCost == NaN){
+            filteredListOfCards.cardNames = [...filteredListOfCards.cardNames, listOfAllCards[i].name.toLowerCase()];
+            filteredListOfCards.cardId = [...filteredListOfCards.cardId, listOfAllCards[i].dbfId];
+            filteredListOfCards.cardMana = [...filteredListOfCards.cardMana, listOfAllCards[i].cost];
+            filteredListOfCards.cardClass = [...filteredListOfCards.cardClass, listOfAllCards[i].cardClass];
+        //}
+    }
+    return filteredListOfCards;
+}
 
+function createDeck(deckReadingResults, listOfAllCards){
+    let deck = [];
+    let deckClass;
+    for (var i = 0; i < deckReadingResults.length; i++){
 
-    // Split the output into potential cards, seperated by newlines
-    var fullText = tesseractResult['text'];
-    var output = fullText.split('\n');
-    var deckClass;
-
-    for (var i = 0; i < output.length; i++){
-
-        // Clean the output for better comparing results
-        var card = output[i].replace(/[^a-zA-Z0-9* ]/g, '');
+        // Clean the deckReadingResults for better comparing results
+        var card = deckReadingResults[i].replace(/[^a-zA-Z0-9* ]/g, '');
 
         // Skip all the mistake rows
         var trueLength = card.replace(/ /g, '').length;
@@ -66,16 +61,6 @@ function cleanOcrResults(cardData, tesseractResult){
         // if the length of the row is too short, chances are it's a misreading and not an actual row
         // 5 is just a guess, might require re-evaluation
         if(trueLength > 5){ 
-
-            // empty the potential cards pool for each round
-            cardsObject = {
-                cardNames: [],
-                cardId: [],
-                cardMana: [],
-                cardClass: []
-            }
-
-            
 
             // Find out the manacost, cardname and count from the line
             card = card.trim();
@@ -107,57 +92,54 @@ function cleanOcrResults(cardData, tesseractResult){
             card = card.replace(/1/g, "l");
 
             
-            // select only the cards that have the correct mana as potential candidates
-            // this heavily relies on mana reading to be correct, but it seems rather reliable
-            // faulty reads usually make manaCost NaN, so just pass everything then
-            for(let i = 0; i < cardData.length; i++){
-                
-                // this is causing empty cardsObjects, which break the stringSimiliarity, so commented until fixed
-                //if(cardData[i].cost == manaCost || manaCost == NaN){
-                    cardsObject.cardNames = [...cardsObject.cardNames, cardData[i].name.toLowerCase()];
-                    cardsObject.cardId = [...cardsObject.cardId, cardData[i].dbfId];
-                    cardsObject.cardMana = [...cardsObject.cardMana, cardData[i].cost];
-                    cardsObject.cardClass = [...cardsObject.cardClass, cardData[i].cardClass];
-                //}
-            }
+            let filteredListOfCards = filterCardsList(listOfAllCards, manaCost);
 
             // find the best match from the hearthstone JSON collection
             
             if(card){
-                let cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), cardsObject.cardNames);
+                let cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), filteredListOfCards.cardNames);
             
 
-                if(cardsObject.cardClass[cleanedCard.bestMatchIndex] !== "NEUTRAL")
-                    deckClass = cardsObject.cardClass[cleanedCard.bestMatchIndex];
+                if(filteredListOfCards.cardClass[cleanedCard.bestMatchIndex] !== "NEUTRAL")
+                    deckClass = filteredListOfCards.cardClass[cleanedCard.bestMatchIndex];
 
-                //console.log("Original: " + card + " Best match: " + cardsObject.cardNames[cleanedCard.bestMatchIndex] + " ID: " + cardsObject.cardId[cleanedCard.bestMatchIndex] + " Index: " + cleanedCard.bestMatchIndex + " Class: " + cardsObject.cardClass[cleanedCard.bestMatchIndex] + " Mana: " + manaCost + " Count: " + cardCount );
+                //console.log("Original: " + card + " Best match: " + filteredListOfCards.cardNames[cleanedCard.bestMatchIndex] + " ID: " + filteredListOfCards.cardId[cleanedCard.bestMatchIndex] + " Index: " + cleanedCard.bestMatchIndex + " Class: " + filteredListOfCards.cardClass[cleanedCard.bestMatchIndex] + " Mana: " + manaCost + " Count: " + cardCount );
 
                 // Add the card to the deck
                 deck = [...deck, {
-                    cardName: cardsObject.cardNames[cleanedCard.bestMatchIndex],
+                    cardName: filteredListOfCards.cardNames[cleanedCard.bestMatchIndex],
                     originalReading: card,
-                    cardClass: cardsObject.cardClass[cleanedCard.bestMatchIndex],
-                    id: cardsObject.cardId[cleanedCard.bestMatchIndex],
+                    cardClass: filteredListOfCards.cardClass[cleanedCard.bestMatchIndex],
+                    id: filteredListOfCards.cardId[cleanedCard.bestMatchIndex],
                     count: cardCount,
                     manaCost: manaCost
                 }]
             }
         }
-    } // end of for-loop: tesseract output
+    }
+    return [deck, deckClass];
+}
 
 
+function cleanOcrResults(listOfAllCards, tesseractResult){
 
 
-
-    // Here starts the round 2 of fixing the results
-
+    // Split the deckReadingResultsArray into potential cards, seperated by newlines
+    var fullText = tesseractResult['text'];
+    var deckReadingResultsArray = fullText.split('\n');
+    
+    // Only made like this, because the function returns 2 values
+    // Need to take a look if there's a cleaner option avaiable
+    let deckTemp = createDeck(deckReadingResultsArray, listOfAllCards);
+    let deck = deckTemp[0];
+    let deckClass = deckTemp[1];
 
     var counts = {};
     var compare = 0;
 
     // find the class with highest frequency, which is the most likely class for the deck
     // 'neutral' is not applicable as a class
-    for (i = 0; i < deck.length; i++){
+    for (let i = 0; i < deck.length; i++){
         var cardClass = deck[i].cardClass;
         
         if(cardClass != "NEUTRAL"){
@@ -173,92 +155,15 @@ function cleanOcrResults(cardData, tesseractResult){
         }
     }
 
-    function adjustDeck(adjustType, cardIndex = 0){
-        // empty the potential cards pool for each round
-        cardsObject = {
-            cardNames: [],
-            cardId: [],
-            cardMana: [],
-            cardClass: []
-        }
-        var proceed = false;
 
-        // find new set of potential cards now filtered with both the manacost and the deck's class
-        if(adjustType == "Class"){
-            for(let j = 0; j < cardData.length; j++){
-                if(cardData[j].cost == deck[i].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
-                    cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                    cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
-                    cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
-                    cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
-                }
-            }
-            proceed = true;
-        } else if (adjustType == "Mana"){
-            for(let j = 0; j < cardData.length; j++){
-                // first card
-                if (i == 0){
-                    if (deck[i].manaCost > deck[1].manaCost){
-                        if(cardData[j].cost <= deck[i+1].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
-                            cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
-                            cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
-                            cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
-                            proceed = true;
-                        }
-                    }
-                // last card
-                } else if (i == deck.length - 1){
-                    if (deck[i].manaCost < deck[i-1].manaCost){
-                        if(cardData[j].cost >= deck[i-1].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
-                            cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
-                            cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
-                            cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
-                            proceed = true;
-                        }
-                    }
-                // middle cards
-                } else {
-                    if (deck[i].manaCost < deck[i-1].manaCost || deck[i].manaCost > deck[i+1].manaCost){
-                        if(cardData[j].cost >= deck[i-1].manaCost && cardData[j].cost <= deck[i+1].manaCost && (cardData[j].cardClass == deckClass || cardData[j].cardClass == "NEUTRAL")){
-                            cardsObject.cardNames = [...cardsObject.cardNames, cardData[j].name.toLowerCase()];
-                            cardsObject.cardId = [...cardsObject.cardId, cardData[j].dbfId];
-                            cardsObject.cardMana = [...cardsObject.cardMana, cardData[j].cost];
-                            cardsObject.cardClass = [...cardsObject.cardClass, cardData[j].cardClass];
-                            proceed = true;
-                        }
-                    }
-                }
-                
-            }
-        }
-
-        if (proceed){
-            // find the best match from the new set of potential options
-            let cleanedCard = stringSimilarity.findBestMatch(deck[i].originalReading.toLowerCase(), cardsObject.cardNames);
-        
-            // set the new best match's values to object
-            // no need to edit count or original reading, since they stay the same
-            deck[i].cardName = cardsObject.cardNames[cleanedCard.bestMatchIndex];
-            deck[i].cardClass = cardsObject.cardClass[cleanedCard.bestMatchIndex];
-            deck[i].id = cardsObject.cardId[cleanedCard.bestMatchIndex];
-            deck[i].mana = cardsObject.cardId[cleanedCard.bestMatchIndex];
-        }
-        
-    }
-
-    // fix all the minority classes to represent the deck's class
-    for (i = 0; i < deck.length; i++){
+    for (let i = 0; i < deck.length; i++){
         if(deck[i].cardClass !== deckClass && deck[i].cardClass !== "NEUTRAL"){
-            adjustDeck("Class");
+            adjustDeck(deck, "Class", i, listOfAllCards);
         }
     }
 
-    // this is a very flawed first edition of mana check
-    // it assumes there are never two mistakes in a row
-    for (i = 0; i < deck.length; i++){
-        adjustDeck("Mana");
+    for (let i = 0; i < deck.length; i++){
+        adjustDeck(deck, "Mana", i, listOfAllCards);
     }
 
     //let heroID = getHeroId(deckClass);
@@ -269,7 +174,7 @@ function cleanOcrResults(cardData, tesseractResult){
     };
 
     // Create a deckstring from the deck
-    for (i = 0; i < deck.length; i++){
+    for (let i = 0; i < deck.length; i++){
         
         console.log("Original: "+deck[i].originalReading
             +"\t\t Card: "+deck[i].cardName
@@ -286,6 +191,85 @@ function cleanOcrResults(cardData, tesseractResult){
     return readyDeckcode;
 }
 module.exports.cleanOcrResults = cleanOcrResults;
+
+// fix cards that differ from the majority in manaflow or classtype
+// TODO: take a look at the manacheck, doesn't work with 2 mistakes in a row
+// 4 function parameters are apparently a lot, maybe reconsider the whole function's structure?
+function adjustDeck(deck, adjustType, cardIndex, listOfAllCards){
+    // empty the potential cards pool
+    let filteredListOfCards = {
+        cardNames: [],
+        cardId: [],
+        cardMana: [],
+        cardClass: []
+    }
+    var proceed = false;
+
+    // find new set of potential cards now filtered with both the manacost and the deck's class
+    if(adjustType == "Class"){
+        for(let j = 0; j < listOfAllCards.length; j++){
+            if(listOfAllCards[j].cost == deck[cardIndex].manaCost && (listOfAllCards[j].cardClass == deckClass || listOfAllCards[j].cardClass == "NEUTRAL")){
+                filteredListOfCards.cardNames = [...filteredListOfCards.cardNames, listOfAllCards[j].name.toLowerCase()];
+                filteredListOfCards.cardId = [...filteredListOfCards.cardId, listOfAllCards[j].dbfId];
+                filteredListOfCards.cardMana = [...filteredListOfCards.cardMana, listOfAllCards[j].cost];
+                filteredListOfCards.cardClass = [...filteredListOfCards.cardClass, listOfAllCards[j].cardClass];
+            }
+        }
+        proceed = true;
+    } else if (adjustType == "Mana"){
+        for(let j = 0; j < listOfAllCards.length; j++){
+            // first card
+            if (cardIndex == 0){
+                if (deck[cardIndex].manaCost > deck[1].manaCost){
+                    if(listOfAllCards[j].cost <= deck[cardIndex+1].manaCost && (listOfAllCards[j].cardClass == deckClass || listOfAllCards[j].cardClass == "NEUTRAL")){
+                        filteredListOfCards.cardNames = [...filteredListOfCards.cardNames, listOfAllCards[j].name.toLowerCase()];
+                        filteredListOfCards.cardId = [...filteredListOfCards.cardId, listOfAllCards[j].dbfId];
+                        filteredListOfCards.cardMana = [...filteredListOfCards.cardMana, listOfAllCards[j].cost];
+                        filteredListOfCards.cardClass = [...filteredListOfCards.cardClass, listOfAllCards[j].cardClass];
+                        proceed = true;
+                    }
+                }
+            // last card
+            } else if (cardIndex == deck.length - 1){
+                if (deck[cardIndex].manaCost < deck[cardIndex-1].manaCost){
+                    if(listOfAllCards[j].cost >= deck[cardIndex-1].manaCost && (listOfAllCards[j].cardClass == deckClass || listOfAllCards[j].cardClass == "NEUTRAL")){
+                        filteredListOfCards.cardNames = [...filteredListOfCards.cardNames, listOfAllCards[j].name.toLowerCase()];
+                        filteredListOfCards.cardId = [...filteredListOfCards.cardId, listOfAllCards[j].dbfId];
+                        filteredListOfCards.cardMana = [...filteredListOfCards.cardMana, listOfAllCards[j].cost];
+                        filteredListOfCards.cardClass = [...filteredListOfCards.cardClass, listOfAllCards[j].cardClass];
+                        proceed = true;
+                    }
+                }
+            // middle cards
+            } else {
+                if (deck[cardIndex].manaCost < deck[cardIndex-1].manaCost || deck[cardIndex].manaCost > deck[cardIndex+1].manaCost){
+                    if(listOfAllCards[j].cost >= deck[cardIndex-1].manaCost && listOfAllCards[j].cost <= deck[cardIndex+1].manaCost && (listOfAllCards[j].cardClass == deckClass || listOfAllCards[j].cardClass == "NEUTRAL")){
+                        filteredListOfCards.cardNames = [...filteredListOfCards.cardNames, listOfAllCards[j].name.toLowerCase()];
+                        filteredListOfCards.cardId = [...filteredListOfCards.cardId, listOfAllCards[j].dbfId];
+                        filteredListOfCards.cardMana = [...filteredListOfCards.cardMana, listOfAllCards[j].cost];
+                        filteredListOfCards.cardClass = [...filteredListOfCards.cardClass, listOfAllCards[j].cardClass];
+                        proceed = true;
+                    }
+                }
+            }
+            
+        }
+    }
+
+    if (proceed){
+        // find the best match from the new set of potential options
+        let cleanedCard = stringSimilarity.findBestMatch(deck[cardIndex].originalReading.toLowerCase(), filteredListOfCards.cardNames);
+    
+        // set the new best match's values to object
+        // no need to edit count or original reading, since they stay the same
+        deck[cardIndex].cardName = filteredListOfCards.cardNames[cleanedCard.bestMatchIndex];
+        deck[cardIndex].cardClass = filteredListOfCards.cardClass[cleanedCard.bestMatchIndex];
+        deck[cardIndex].id = filteredListOfCards.cardId[cleanedCard.bestMatchIndex];
+        deck[cardIndex].mana = filteredListOfCards.cardId[cleanedCard.bestMatchIndex];
+    }
+    return deck;
+    
+}
 
 // retrieves the dbfId's for the default heroes of the classes
 function getHeroId(classname){
@@ -315,6 +299,3 @@ function getHeroId(classname){
     }
 }
 
-
-
-module.exports.ocrProcessing = ocrInsertPoint;
