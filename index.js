@@ -1,4 +1,4 @@
-let ocr = require("./src/ocr");
+let ocr = require("./src/ocrTesseract");
 let config = require("./src/config");
 let Twit = require('twit');
 

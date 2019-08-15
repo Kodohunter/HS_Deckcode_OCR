@@ -12,6 +12,7 @@
     "deckstrings": "^2.1.0",
     "esm": "^3.2.25",
     "nodejs-ocr": "^1.1.3",
+    "ocr-space-api": "^1.0.1",
     "request": "^2.88.0",
     "string-similarity": "^3.0.0",
     "tesseract.js": "^1.0.19",
