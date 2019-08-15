@@ -1,7 +1,8 @@
 const ocrSpaceApi = require('ocr-space-api');
+let config = require('config');
  
 var options =  { 
-    apikey: '<your_api_key_here>',
+    apikey: config.ocrSpaceApiKey,
     language: 'por', // Português
     imageFormat: 'image/png', // Image Type (Only png ou gif is acceptable at the moment i wrote this)
     isOverlayRequired: true
