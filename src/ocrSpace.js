@@ -1,21 +1,24 @@
 const ocrSpaceApi = require('ocr-space-api');
-let config = require('config');
+const config = require('./config');
  
-var options =  { 
-    apikey: config.ocrSpaceApiKey,
-    language: 'por', // Português
-    imageFormat: 'image/png', // Image Type (Only png ou gif is acceptable at the moment i wrote this)
-    isOverlayRequired: true
-  };
- 
-// Image file to upload
-const imageFilePath = "imageFile.jpg";
- 
-// Run and wait the result
-ocrSpaceApi.parseImageFromLocalFile(imageFilePath, options)
-  .then(function (parsedResult) {
-    console.log('parsedText: \n', parsedResult.parsedText);
-    console.log('ocrParsedResult: \n', parsedResult.ocrParsedResult);
-  }).catch(function (err) {
-    console.log('ERROR:', err);
+let options =  { 
+  apikey: config.ocrSpaceApiKey,
+  language: 'eng',
+  imageFormat: 'image/png', // Image Type (Only png ou gif is acceptable at the moment i wrote this)
+  isOverlayRequired: true,
+  isTable: true
+};
+
+function runOcrSpaceRecognition(fileUrl){
+  return new Promise(resolve => {
+    ocrSpaceApi.parseImageFromLocalFile(fileUrl, options)
+    .then(function (parsedResult) {
+      console.log('parsedText: \n', parsedResult.parsedText);
+      console.log('ocrParsedResult: \n', parsedResult.ocrParsedResult);
+      resolve(parsedResult);
+    }).catch(function (err) {
+      console.log('ERROR:', err);
+    });
   });
+} 
+module.exports.runOcrRecognition = runOcrSpaceRecognition;

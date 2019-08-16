@@ -1,6 +1,9 @@
-let ocr = require("./src/ocrTesseract");
-let config = require("./src/config");
-let Twit = require('twit');
+const ocr = require("./src/ocrSpace");
+const cardListManagement = require("./src/cardListManagement");
+const config = require("./src/config");
+const Twit = require('twit');
+const deckstring = require("./src/deckstring");
+const deckBuilder = require("./src/deckBuilder");
 
 var twitter = new Twit(config.twitterConfig);
 
@@ -47,15 +50,19 @@ function replyTheDeckcode(deckcode){
 }
 
 // for ocr testing, we'll just directly test lists instead of testing via twitter posts
-let testFile = './decklists/kuva6.png';
+let testFile = './decklists/kuva5.png';
 main(testFile);
 
 // making function async allows for awaits, something the program will stop and wait for
 // The wait will be broken by the resolve in the function's promise
 async function main(filePath){
-    let listOfAllCards = await ocr.getCollectibleCardsJSON();
-    let tesseractResult = await ocr.runTesseractRecognition(filePath);
-    let readyDeckcode = ocr.cleanOcrResults(listOfAllCards, tesseractResult);
-    replyTheDeckcode(readyDeckcode);
+    let listOfAllCards = await cardListManagement.getCollectibleCardsJSON();
+    let ocrResult = await ocr.runOcrRecognition(filePath);
+
+    //let decklist = deckBuilder.deckBuilder(listOfAllCards, ocrResult);
+
+    //let readyDeckcode = deckstring.convertIntoDeckstring(decklist); //ocr.cleanOcrResults(listOfAllCards, ocrResult);
+    //replyTheDeckcode(readyDeckcode);
+    console.log("Done");
 }
 

@@ -1,0 +1,7 @@
+onAuthenticated()
+    main()
+        getCollectibleCardsJSON()
+        runOcrRecognition()
+        createDeckList()
+        convertIntoDeckstring()
+        replyTheDeckcode
