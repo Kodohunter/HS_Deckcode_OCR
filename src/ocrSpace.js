@@ -6,7 +6,8 @@ let options =  {
   language: 'eng',
   imageFormat: 'image/png', // Image Type (Only png ou gif is acceptable at the moment i wrote this)
   isOverlayRequired: true,
-  isTable: true
+  isTable: true,
+  scale: true
 };
 
 function runOcrSpaceRecognition(fileUrl){
