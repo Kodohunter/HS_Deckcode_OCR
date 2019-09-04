@@ -7,7 +7,7 @@ const cardListManagement = require("./cardListManagement");
 // I don't like the name
 function deckBuilder(listOfAllCards, ocrResult){
 
-    let deckObject = cleanOcrResults(listOfAllCards, tesseractResult);
+    let deckObject = cleanOcrResults(listOfAllCards, ocrResult);
 
     let readyDeckcode = deckstring.convertIntoDeckstring(deckObject);
     return readyDeckcode;
@@ -15,10 +15,10 @@ function deckBuilder(listOfAllCards, ocrResult){
 module.exports.deckBuilder = deckBuilder;
 
 // What does this function do? pilko pienemmäks. Main file atm.
-function cleanOcrResults(listOfAllCards, tesseractResult){
+function cleanOcrResults(listOfAllCards, ocrResult){
 
     // Split the deckReadingResultsArray into potential cards, seperated by newlines
-    let fullText = tesseractResult['text'];
+    let fullText = ocrResult['text'];
     let deckReadingResultsArray = fullText.split('\n');
     
     // Only made like this, because the function returns 2 values
