@@ -17,57 +17,50 @@ module.exports.deckBuilder = deckBuilder;
 // What does this function do? pilko pienemmäks. Main file atm.
 function cleanOcrResults(listOfAllCards, ocrResult){
 
-    // Split the deckReadingResultsArray into potential cards, seperated by newlines
-    let fullText = ocrResult['text'];
-    let deckReadingResultsArray = fullText.split('\n');
-    
-    // Only made like this, because the function returns 2 values
-    // Need to take a look if there's a cleaner option avaiable
-    let deckTemp = createDeck(deckReadingResultsArray, listOfAllCards);
-    let deck = deckTemp[0];
-    let deckClass = deckTemp[1];
-
-    deckClass = getDeckClass(deck);
-
-
-    for (let i = 0; i < deck.length; i++){
-        if(deck[i].cardClass !== deckClass && deck[i].cardClass !== "NEUTRAL"){
-            adjustDeck(deck, "Class", i, listOfAllCards);
-        }
-    }
-
-    for (let i = 0; i < deck.length; i++){
-        adjustDeck(deck, "Mana", i, listOfAllCards);
-    }
+    // returns deck.cards & deck.class
+    let deck = createDeck(ocrResult, listOfAllCards);
 
     // initialize deck
-    let deckObject = {
+    let deckstringCompatibleDeckobject = {
         cards: [],
-        heroes: [getHeroId(deckClass)],
+        heroes: [getHeroId(deck.class)],
         format: FormatType.FT_WILD
     };
 
     // add the cards to the deck
-    for (let i = 0; i < deck.length; i++){
-        console.log("Original: "+deck[i].originalReading
-            +"\t\t Card: "+deck[i].cardName
-            +"\t\t Amount: "+deck[i].count
-            +"\t\t Class: "+deck[i].cardClass
-            +"\t\t Mana: "+deck[i].manaCost);
+    for (let i = 0; i < deck.cards.length; i++){
+        console.log("Original: "+deck.cards[i].originalReading
+            +"\t\t Card: "+deck.cards[i].cardName
+            +"\t\t Amount: "+deck.cards[i].count
+            +"\t\t Class: "+deck.cards[i].cardClass
+            +"\t\t Mana: "+deck.cards[i].manaCost);
 
-        deckObject.cards[i] = [deck[i].id, deck[i].count];
+        deckstringCompatibleDeckobject.cards[i] = [deck.cards[i].id, deck.cards[i].count];
     }
 
-    return deckObject;
+    return deckstringCompatibleDeckobject;
 }
 
-function createDeck(deckReadingResults, listOfAllCards){
+function createDeck(ocrResults, listOfAllCards){
+
+    // TODO: fix this function to fit the new ocrResult format
+    // In the future, make all ocr processing functions to output in a format this supports
+
+    /*
+        ocrResults format:
+        [
+            [mana, cardName, count],
+            [mana, cardName, count],
+            etc.
+        ]
+    */
+
     let deck = [];
-    let deckClass;
-    for (let i = 0; i < deckReadingResults.length; i++){
+    console.log(ocrResults[0]);
+    for (let i = 0; i < ocrResults.length; i++){
 
         // Clean the deckReadingResults for better comparing results
-        let card = deckReadingResults[i].replace(/[^a-zA-Z0-9* ]/g, '');
+        let card = ocrResults[i].replace(/[^a-zA-Z0-9* ]/g, '');
 
         // Skip all the mistake rows
         let trueLength = card.replace(/ /g, '').length;
@@ -113,12 +106,6 @@ function createDeck(deckReadingResults, listOfAllCards){
             if(card){
                 let cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), filteredListOfCards.cardNames);
             
-
-                if(filteredListOfCards.cardClass[cleanedCard.bestMatchIndex] !== "NEUTRAL")
-                    deckClass = filteredListOfCards.cardClass[cleanedCard.bestMatchIndex];
-
-                //console.log("Original: " + card + " Best match: " + filteredListOfCards.cardNames[cleanedCard.bestMatchIndex] + " ID: " + filteredListOfCards.cardId[cleanedCard.bestMatchIndex] + " Index: " + cleanedCard.bestMatchIndex + " Class: " + filteredListOfCards.cardClass[cleanedCard.bestMatchIndex] + " Mana: " + manaCost + " Count: " + cardCount );
-
                 // Add the card to the deck
                 deck = [...deck, {
                     cardName: filteredListOfCards.cardNames[cleanedCard.bestMatchIndex],
@@ -131,7 +118,15 @@ function createDeck(deckReadingResults, listOfAllCards){
             }
         }
     }
-    return [deck, deckClass];
+
+    let deckClass = getDeckClass(deck);
+    
+    let returnDeck = {
+        cards: deck,
+        class: deckClass
+    }
+
+    return returnDeck;
 }
 
 // find the class with highest frequency, which is the most likely class for the deck

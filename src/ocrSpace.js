@@ -14,9 +14,6 @@ function runOcrSpaceRecognition(fileUrl){
   return new Promise(resolve => {
     ocrSpaceApi.parseImageFromLocalFile(fileUrl, options)
     .then(function (parsedResult) {
-      //console.log('parsedText: \n', parsedResult.parsedText);
-      //console.log('ocrParsedResult: \n', parsedResult.ocrParsedResult);
-      console.log(parsedResult.ocrParsedResult.ParsedResults[0].ParsedText);
       let formattedResult = formatOcrResultsIntoArray(parsedResult.ocrParsedResult.ParsedResults[0].ParsedText);
       resolve(formattedResult);
     }).catch(function (err) {

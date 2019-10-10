@@ -59,9 +59,9 @@ async function main(filePath){
     let listOfAllCards = await cardListManagement.getCollectibleCardsJSON();
     let ocrResult = await ocr.runOcrRecognition(filePath);
 
-    //let decklist = deckBuilder.deckBuilder(listOfAllCards, ocrResult);
+    let deckstringCompatibleDeckobject = deckBuilder.deckBuilder(listOfAllCards, ocrResult);
 
-    //let readyDeckcode = deckstring.convertIntoDeckstring(decklist); //ocr.cleanOcrResults(listOfAllCards, ocrResult);
+    let readyDeckcode = deckstring.convertIntoDeckstring(deckstringCompatibleDeckobject);
     //replyTheDeckcode(readyDeckcode);
     console.log("Done");
 }
