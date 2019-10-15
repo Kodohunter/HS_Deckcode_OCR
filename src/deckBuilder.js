@@ -59,64 +59,57 @@ function createDeck(ocrResults, listOfAllCards){
     console.log(ocrResults[0]);
     for (let i = 0; i < ocrResults.length; i++){
 
-        // Clean the deckReadingResults for better comparing results
-        let card = ocrResults[i].replace(/[^a-zA-Z0-9* ]/g, '');
 
-        // Skip all the mistake rows
-        let trueLength = card.replace(/ /g, '').length;
-
-        // if the length of the row is too short, chances are it's a misreading and not an actual row
-        // 5 is just a guess, might require re-evaluation
-        if(trueLength > 5){ 
-
-            // Find out the manacost, cardname and count from the line
-            card = card.trim();
-            let manacostPosEnd = card.indexOf(" ");
-            let cardNamePosEnd = card.lastIndexOf(" ");
-
-            let manaCost = card.slice(0, manacostPosEnd);
-            let cardCount = card.slice(cardNamePosEnd + 1);
-            card = card.slice(manacostPosEnd + 1, cardNamePosEnd);
-
-            switch (true){
-                case cardCount.includes("*"): // legendary
-                    cardCount = 1;
-                    break;
-                case cardCount.includes("2") || cardCount.toLowerCase().includes("z"):
-                    cardCount = 2;
-                    break;
-                default:
-                    card = card + cardCount;
-                    cardCount = 1;
-                    break;
-            }
+        let manaCost = ocrResults[i][0];
+        let cardName = ocrResults[i][1].replace(/[^a-zA-Z0-9 ]/g, '');
+        cardName = cardName.trim();
+        let cardCount = ocrResults[i][2];
 
 
-            // common mistakes fixes
-            manaCost = manaCost.replace(/oO/g, "0");
-            manaCost = manaCost.replace(/zZ/g, "2");
-            manaCost = parseInt(manaCost);
-            card = card.replace(/1/g, "l");
-
-            
-            let filteredListOfCards = cardListManagement.filterCardsList(listOfAllCards, manaCost);
-
-            // find the best match from the hearthstone JSON collection
-            
-            if(card){
-                let cleanedCard = stringSimilarity.findBestMatch(card.toLowerCase(), filteredListOfCards.cardNames);
-            
-                // Add the card to the deck
-                deck = [...deck, {
-                    cardName: filteredListOfCards.cardNames[cleanedCard.bestMatchIndex],
-                    originalReading: card,
-                    cardClass: filteredListOfCards.cardClass[cleanedCard.bestMatchIndex],
-                    id: filteredListOfCards.cardId[cleanedCard.bestMatchIndex],
-                    count: cardCount,
-                    manaCost: manaCost
-                }]
-            }
+        // check cardcount
+        switch (true){
+            case cardCount.includes("*"): // legendary
+                cardCount = 1;
+                break;
+            case cardCount.includes("2") || cardCount.toLowerCase().includes("z"):
+                cardCount = 2;
+                break;
+            default:
+                cardName = cardName + cardCount;
+                cardCount = 1;
+                break;
         }
+
+
+        // common mistakes fixes
+        // TODO 15.10.2019: reconsider the need after changing ocr processor to a better one
+        manaCost = manaCost.replace(/oO/g, "0");
+        manaCost = manaCost.replace(/zZ/g, "2");
+        manaCost = parseInt(manaCost);
+        cardName = cardName.replace(/1/g, "l");
+
+        // TODO: create error handling for missing cardName or cardCount
+
+        // this assumes that manacost is read correctly. Lately the name has been more correct than the mana though
+        let filteredListOfCards = cardListManagement.filterCardsList(listOfAllCards, manaCost);
+
+        // find the best match from the hearthstone JSON collection
+        if(cardName){
+            console.log(typeof(cardName));
+            console.log(typeof(filteredListOfCards));
+            let cleanedCard = stringSimilarity.findBestMatch(cardName.toLowerCase(), filteredListOfCards.cardNames);
+        
+            // Add the cardName to the deck
+            deck = [...deck, {
+                cardName: filteredListOfCards.cardNames[cleanedCard.bestMatchIndex],
+                originalReading: cardName,
+                cardClass: filteredListOfCards.cardClass[cleanedCard.bestMatchIndex],
+                id: filteredListOfCards.cardId[cleanedCard.bestMatchIndex],
+                count: cardCount,
+                manaCost: manaCost
+            }]
+        }
+        
     }
 
     let deckClass = getDeckClass(deck);
