@@ -31,6 +31,5 @@ function formatOcrResultsIntoArray(parsedResult){
   for(let i = 0; i < parsedResult.length; i++){
     formattedOcrResults[i] = parsedResult[i].split('\t')
   }
-  console.log(formattedOcrResults);
   return formattedOcrResults;
 }

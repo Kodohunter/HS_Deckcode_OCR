@@ -62,6 +62,7 @@ async function main(filePath){
     let deckstringCompatibleDeckobject = deckBuilder.deckBuilder(listOfAllCards, ocrResult);
 
     let readyDeckcode = deckstring.convertIntoDeckstring(deckstringCompatibleDeckobject);
+    console.log(readyDeckcode)
     //replyTheDeckcode(readyDeckcode);
     console.log("Done");
 }

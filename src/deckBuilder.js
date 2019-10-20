@@ -2,15 +2,14 @@
 
 const stringSimilarity = require('string-similarity');
 const cardListManagement = require("./cardListManagement");
+import { encode, decode, FormatType } from "deckstrings";
 
 // main function for the deckbuilding process
 // I don't like the name
 function deckBuilder(listOfAllCards, ocrResult){
 
     let deckObject = cleanOcrResults(listOfAllCards, ocrResult);
-
-    let readyDeckcode = deckstring.convertIntoDeckstring(deckObject);
-    return readyDeckcode;
+    return deckObject;
 }
 module.exports.deckBuilder = deckBuilder;
 
@@ -29,11 +28,13 @@ function cleanOcrResults(listOfAllCards, ocrResult){
 
     // add the cards to the deck
     for (let i = 0; i < deck.cards.length; i++){
+        /*
         console.log("Original: "+deck.cards[i].originalReading
             +"\t\t Card: "+deck.cards[i].cardName
             +"\t\t Amount: "+deck.cards[i].count
             +"\t\t Class: "+deck.cards[i].cardClass
             +"\t\t Mana: "+deck.cards[i].manaCost);
+        */
 
         deckstringCompatibleDeckobject.cards[i] = [deck.cards[i].id, deck.cards[i].count];
     }
@@ -56,60 +57,63 @@ function createDeck(ocrResults, listOfAllCards){
     */
 
     let deck = [];
-    console.log(ocrResults[0]);
+    //console.log(ocrResults[0]);
     for (let i = 0; i < ocrResults.length; i++){
 
+        console.log(ocrResults[i]);
+        if(ocrResults[i].length >= 3){
 
-        let manaCost = ocrResults[i][0];
-        let cardName = ocrResults[i][1].replace(/[^a-zA-Z0-9 ]/g, '');
-        cardName = cardName.trim();
-        let cardCount = ocrResults[i][2];
-
-
-        // check cardcount
-        switch (true){
-            case cardCount.includes("*"): // legendary
-                cardCount = 1;
-                break;
-            case cardCount.includes("2") || cardCount.toLowerCase().includes("z"):
-                cardCount = 2;
-                break;
-            default:
-                cardName = cardName + cardCount;
-                cardCount = 1;
-                break;
-        }
-
-
-        // common mistakes fixes
-        // TODO 15.10.2019: reconsider the need after changing ocr processor to a better one
-        manaCost = manaCost.replace(/oO/g, "0");
-        manaCost = manaCost.replace(/zZ/g, "2");
-        manaCost = parseInt(manaCost);
-        cardName = cardName.replace(/1/g, "l");
-
-        // TODO: create error handling for missing cardName or cardCount
-
-        // this assumes that manacost is read correctly. Lately the name has been more correct than the mana though
-        let filteredListOfCards = cardListManagement.filterCardsList(listOfAllCards, manaCost);
-
-        // find the best match from the hearthstone JSON collection
-        if(cardName){
-            console.log(typeof(cardName));
-            console.log(typeof(filteredListOfCards));
-            let cleanedCard = stringSimilarity.findBestMatch(cardName.toLowerCase(), filteredListOfCards.cardNames);
         
-            // Add the cardName to the deck
-            deck = [...deck, {
-                cardName: filteredListOfCards.cardNames[cleanedCard.bestMatchIndex],
-                originalReading: cardName,
-                cardClass: filteredListOfCards.cardClass[cleanedCard.bestMatchIndex],
-                id: filteredListOfCards.cardId[cleanedCard.bestMatchIndex],
-                count: cardCount,
-                manaCost: manaCost
-            }]
+            let manaCost = ocrResults[i][0];
+            let cardName = ocrResults[i][1].replace(/[^a-zA-Z0-9 ]/g, '');
+            cardName = cardName.trim();
+            let cardCount = ocrResults[i][2];
+
+
+            // check cardcount
+            switch (true){
+                case cardCount.includes("*"): // legendary
+                    cardCount = 1;
+                    break;
+                case cardCount.includes("2") || cardCount.toLowerCase().includes("z"):
+                    cardCount = 2;
+                    break;
+                default:
+                    cardName = cardName + cardCount;
+                    cardCount = 1;
+                    break;
+            }
+
+
+            // common mistakes fixes
+            // TODO 15.10.2019: reconsider the need after changing ocr processor to a better one
+            manaCost = manaCost.replace(/oO/g, "0");
+            manaCost = manaCost.replace(/zZ/g, "2");
+            manaCost = parseInt(manaCost);
+            cardName = cardName.replace(/1/g, "l");
+
+            // TODO: create error handling for missing cardName or cardCount
+
+            // this assumes that manacost is read correctly. Lately the name has been more correct than the mana though
+            let filteredListOfCards = cardListManagement.filterCardsList(listOfAllCards, manaCost);
+
+            // find the best match from the hearthstone JSON collection
+            if(cardName){
+                //console.log(typeof(cardName));
+                //console.log(typeof(filteredListOfCards));
+                let cleanedCard = stringSimilarity.findBestMatch(cardName.toLowerCase(), filteredListOfCards.cardNames);
+            
+                // Add the cardName to the deck
+                deck = [...deck, {
+                    cardName: filteredListOfCards.cardNames[cleanedCard.bestMatchIndex],
+                    originalReading: cardName,
+                    cardClass: filteredListOfCards.cardClass[cleanedCard.bestMatchIndex],
+                    id: filteredListOfCards.cardId[cleanedCard.bestMatchIndex],
+                    count: cardCount,
+                    manaCost: manaCost
+                }]
+            }
         }
-        
     }
 
     let deckClass = getDeckClass(deck);
@@ -127,6 +131,7 @@ function createDeck(ocrResults, listOfAllCards){
 function getDeckClass(deck){
     let counts = {};
     let highestCount = 0;
+    let deckClass;
     
     for (let i = 0; i < deck.length; i++){
         let cardClass = deck[i].cardClass;
