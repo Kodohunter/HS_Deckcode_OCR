@@ -15,7 +15,7 @@
     "ocr-space-api": "^1.0.1",
     "request": "^2.88.0",
     "string-similarity": "^3.0.0",
-    "tesseract.js": "^1.0.19",
+    "tesseract.js": "^4.0.2",
     "twit": "^2.2.11"
   }
 }
